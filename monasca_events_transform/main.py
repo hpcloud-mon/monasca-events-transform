@@ -1,4 +1,4 @@
-from monasca_events_transform.transform import Transform
+from transform import Transform
 
 t = Transform()
 
