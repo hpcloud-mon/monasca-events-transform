@@ -23,7 +23,7 @@ nevents = 0
 
 length = 0
 
-while nevents < 10000:
+while nevents < 1000000:
     e = g.generate(now)
     if e:
         nevents += len(e)

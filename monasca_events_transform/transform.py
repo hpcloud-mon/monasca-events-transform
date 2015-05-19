@@ -1,14 +1,10 @@
-import logging
 import json
 import threading
-import time
 
 import kafka
 
 from stackdistiller import condenser
 from stackdistiller import distiller
-
-# logging.basicConfig()
 
 kafka_url = "192.168.10.4:9092"
 
@@ -84,8 +80,6 @@ class Transform(object):
             partition = definition[0]
             definition_payload = json.loads(definition[1].message.value)
 
-            self._definition_consumer.commit([partition])
-
             self._lock.acquire()
 
             transform_id = definition_payload['transform_id']
@@ -99,3 +93,5 @@ class Transform(object):
                     distiller.Distiller(transform_def))
 
             self._lock.release()
+
+            self._definition_consumer.commit([partition])
