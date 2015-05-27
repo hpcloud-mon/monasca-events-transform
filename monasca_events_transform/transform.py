@@ -1,23 +1,30 @@
 import json
+import logging
+import logging.config
+import os
 import threading
+import time
 
 import kafka
+
+from oslo.config import cfg
 
 from stackdistiller import condenser
 from stackdistiller import distiller
 
-kafka_url = "192.168.10.4:9092"
+log = logging.getLogger(__name__)
 
 
 class Transform(object):
     def __init__(self):
-        self._kafka = kafka.client.KafkaClient(kafka_url)
+        self._kafka = kafka.client.KafkaClient(cfg.CONF.kafka.url)
 
         self._event_consumer = kafka.consumer.SimpleConsumer(
             self._kafka,
-            "Foo",
-            "raw-events",
+            cfg.CONF.kafka.transform_group,
+            cfg.CONF.kafka.events_topic,
             auto_commit=True,
+            buffer_size=250000,
             max_buffer_size=None)
 
         self._event_consumer.seek(0, 2)
@@ -26,9 +33,10 @@ class Transform(object):
 
         self._definition_consumer = kafka.consumer.SimpleConsumer(
             self._kafka,
-            "Bar",
-            "transform-definitions",
+            str(time.time() * 1000) + str(os.getpid()),
+            cfg.CONF.kafka.transform_def_topic,
             auto_commit=True,
+            buffer_size=250000,
             max_buffer_size=None)
 
         self._definition_consumer.seek(0, 2)
@@ -72,7 +80,9 @@ class Transform(object):
 
             if result:
                 # key = time.time() * 1000
-                self._producer.send_messages("transformed-events", *result)
+                self._producer.send_messages(
+                    cfg.CONF.kafka.transformed_events_topic, *result)
+
             self._event_consumer.commit([partition])
 
     def _transform_definitions(self):
@@ -86,9 +96,11 @@ class Transform(object):
             transform_def = definition_payload['transform_definition']
 
             if transform_def == []:
+                log.debug("Delete definition {}".format(transform_id))
                 if transform_id in self._distiller_table:
                     del self._distiller_table[transform_id]
             else:
+                log.debug("Add definition {}".format(transform_id))
                 self._distiller_table[transform_id] = (
                     distiller.Distiller(transform_def))
 
