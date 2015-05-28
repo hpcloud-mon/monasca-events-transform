@@ -92,16 +92,17 @@ log_config = {
         'statsd': {'level': cfg.CONF.logging.statsd}
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['file'],
         'level': cfg.CONF.logging.level
     }
 }
 
-logging.config.dictConfig(log_config)
+log_config = {'loggers': {'kazoo': {'level': 'WARN'}, 'kafka': {'level': 'WARN'}, 'statsd': {'level': 'WARN'}}, 'version': 1, 'disable_existing_loggers': False, 'handlers': {'console': {'formatter': 'default', 'class': 'logging.StreamHandler'}, 'file': {'filename': '/var/log/monasca/notification/notification.log', 'formatter': 'default', 'backupCount': 5, 'class': 'logging.handlers.RotatingFileHandler', 'maxBytes': 10485760}}, 'root': {'handlers': ['file'], 'level': 'INFO'}, 'formatters': {'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'}}}
+
 
 log = logging.getLogger(__name__)
-
 exiting = False
+processors = []
 
 
 def clean_exit(signum, frame=None):
@@ -145,28 +146,31 @@ def start_process():
     p.run()
 
 
-processors = []
+def main():
+    logging.config.dictConfig(log_config)
 
-for proc in range(0, cfg.CONF.transform_processor.number):
-    processors.append(multiprocessing.Process(target=start_process))
+    for proc in range(0, cfg.CONF.transform_processor.number):
+        processors.append(multiprocessing.Process(target=start_process))
 
+    # Start
+    try:
+        log.info('Starting processes')
+        for process in processors:
+            process.start()
 
-# Start
-try:
-    log.info('Starting processes')
-    for process in processors:
-        process.start()
+        # The signal handlers must be added after the processes start otherwise
+        # they run on all processes
+        signal.signal(signal.SIGCHLD, clean_exit)
+        signal.signal(signal.SIGINT, clean_exit)
+        signal.signal(signal.SIGTERM, clean_exit)
 
-    # The signal handlers must be added after the processes start otherwise
-    # they run on all processes
-    signal.signal(signal.SIGCHLD, clean_exit)
-    signal.signal(signal.SIGINT, clean_exit)
-    signal.signal(signal.SIGTERM, clean_exit)
+        while True:
+            time.sleep(10)
 
-    while True:
-        time.sleep(10)
+    except Exception:
+        log.exception('Error! Exiting.')
+        for process in processors:
+            process.terminate()
 
-except Exception:
-    log.exception('Error! Exiting.')
-    for process in processors:
-        process.terminate()
+if __name__ == "__main__":
+    sys.exit(main())
