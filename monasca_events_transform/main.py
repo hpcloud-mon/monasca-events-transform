@@ -67,10 +67,10 @@ cfg.CONF(sys.argv[1:],
 
 log_config = {
     'version': 1,
-    'level': cfg.CONF.logging.level,
+    'disable_existing_loggers': False,
     'formatters': {
         'default': {
-            'format': "%(asctime)s %(levelname)s %(name)s %(message)s"
+            'format': "%(process)d %(asctime)s %(levelname)s %(name)s %(message)s"
         }
     },
     'handlers': {
@@ -92,13 +92,10 @@ log_config = {
         'statsd': {'level': cfg.CONF.logging.statsd}
     },
     'root': {
-        'handlers': ['file'],
+        'handlers': ['console'],
         'level': cfg.CONF.logging.level
     }
 }
-
-log_config = {'loggers': {'kazoo': {'level': 'WARN'}, 'kafka': {'level': 'WARN'}, 'statsd': {'level': 'WARN'}}, 'version': 1, 'disable_existing_loggers': False, 'handlers': {'console': {'formatter': 'default', 'class': 'logging.StreamHandler'}, 'file': {'filename': '/var/log/monasca/notification/notification.log', 'formatter': 'default', 'backupCount': 5, 'class': 'logging.handlers.RotatingFileHandler', 'maxBytes': 10485760}}, 'root': {'handlers': ['file'], 'level': 'INFO'}, 'formatters': {'default': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'}}}
-
 
 log = logging.getLogger(__name__)
 exiting = False

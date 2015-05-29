@@ -96,11 +96,11 @@ class Transform(object):
             transform_def = definition_payload['transform_definition']
 
             if transform_def == []:
-                log.warn("Delete definition {}".format(transform_id))
+                log.info("Delete definition {}".format(transform_id))
                 if transform_id in self._distiller_table:
                     del self._distiller_table[transform_id]
             else:
-                log.warn("Add definition {}".format(transform_id))
+                log.info("Add definition {}".format(transform_id))
                 self._distiller_table[transform_id] = (
                     distiller.Distiller(transform_def))
 
