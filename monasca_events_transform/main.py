@@ -67,10 +67,10 @@ cfg.CONF(sys.argv[1:],
 
 log_config = {
     'version': 1,
-    'level': cfg.CONF.logging.level,
+    'disable_existing_loggers': False,
     'formatters': {
         'default': {
-            'format': "%(asctime)s %(levelname)s %(name)s %(message)s"
+            'format': "%(process)d %(asctime)s %(levelname)s %(name)s %(message)s"
         }
     },
     'handlers': {
@@ -97,11 +97,9 @@ log_config = {
     }
 }
 
-logging.config.dictConfig(log_config)
-
 log = logging.getLogger(__name__)
-
 exiting = False
+processors = []
 
 
 def clean_exit(signum, frame=None):
@@ -145,28 +143,31 @@ def start_process():
     p.run()
 
 
-processors = []
+def main():
+    logging.config.dictConfig(log_config)
 
-for proc in range(0, cfg.CONF.transform_processor.number):
-    processors.append(multiprocessing.Process(target=start_process))
+    for proc in range(0, cfg.CONF.transform_processor.number):
+        processors.append(multiprocessing.Process(target=start_process))
 
+    # Start
+    try:
+        log.info('Starting processes')
+        for process in processors:
+            process.start()
 
-# Start
-try:
-    log.info('Starting processes')
-    for process in processors:
-        process.start()
+        # The signal handlers must be added after the processes start otherwise
+        # they run on all processes
+        signal.signal(signal.SIGCHLD, clean_exit)
+        signal.signal(signal.SIGINT, clean_exit)
+        signal.signal(signal.SIGTERM, clean_exit)
 
-    # The signal handlers must be added after the processes start otherwise
-    # they run on all processes
-    signal.signal(signal.SIGCHLD, clean_exit)
-    signal.signal(signal.SIGINT, clean_exit)
-    signal.signal(signal.SIGTERM, clean_exit)
+        while True:
+            time.sleep(10)
 
-    while True:
-        time.sleep(10)
+    except Exception:
+        log.exception('Error! Exiting.')
+        for process in processors:
+            process.terminate()
 
-except Exception:
-    log.exception('Error! Exiting.')
-    for process in processors:
-        process.terminate()
+if __name__ == "__main__":
+    sys.exit(main())
