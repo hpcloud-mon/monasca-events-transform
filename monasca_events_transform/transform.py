@@ -66,12 +66,13 @@ class Transform(object):
         for event in self._event_consumer:
             partition = event[0]
             event_payload = json.loads(event[1].message.value)
+            event_data = event_payload['event']
 
             result = []
 
             self._lock.acquire()
             for v in self._distiller_table.values():
-                e = v.to_event(event_payload[0], self._condenser)
+                e = v.to_event(event_data, self._condenser)
                 if e:
                     result.append(json.dumps(self._condenser.get_event(),
                                              default=date_handler))
