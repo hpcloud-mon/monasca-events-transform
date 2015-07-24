@@ -7,7 +7,7 @@ import time
 
 import kafka
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from stackdistiller import condenser
 from stackdistiller import distiller

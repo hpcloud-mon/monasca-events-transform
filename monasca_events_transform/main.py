@@ -8,7 +8,7 @@ import time
 
 from transform import Transform
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 logging_opts = [
     cfg.StrOpt('level', default='INFO'),
