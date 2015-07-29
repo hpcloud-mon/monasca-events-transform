@@ -7,10 +7,12 @@ import time
 
 import kafka
 
-from oslo.config import cfg
+from oslo_config import cfg
 
 from stackdistiller import condenser
 from stackdistiller import distiller
+
+from database import retrieve_transforms
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +48,12 @@ class Transform(object):
         self._producer = kafka.producer.SimpleProducer(self._kafka)
 
         self._distiller_table = {}
+
+        for row in retrieve_transforms():
+            transform_id = row[0]
+            transform_def = row[1]
+            self._distiller_table[transform_id] = (
+                distiller.Distiller(transform_def))
 
         self._condenser = condenser.DictionaryCondenser()
 
