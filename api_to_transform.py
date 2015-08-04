@@ -7,9 +7,12 @@ import kafka
 
 import logging
 
+from monascaclient import ksclient
+
 logging.basicConfig()
 
 kafka_url = "192.168.10.4:9092"
+api_url = "http://192.168.10.4:8082"
 
 client = kafka.client.KafkaClient(kafka_url)
 producer = kafka.producer.KeyedProducer(
@@ -111,12 +114,49 @@ conf = [{'event_type': 'compute.instance.*',
                     'service': {'fields': 'publisher_id',
                                 'plugin': 'split'}}}]
 
+def token():
+    keystone = {
+        'username': 'mini-mon',
+        'password': 'password',
+        'project': 'test',
+        'auth_url': 'http://192.168.10.5:35357/v3'
+    }
+    ks_client = ksclient.KSClient(**keystone)
+    return ks_client.token
 
-def send(method, endpoint, msg):
-    requests.request(method=method,
-                     url="http://192.168.10.4:8082" + endpoint,
-                     data=json.dumps(msg),
-                     headers={"application": "json"})
+
+def api_post(endpoint, msg):
+    print "post to: {}".format(api_url + endpoint)
+
+    headers = {
+        'X-Auth-User': 'mini-mon',
+        'X-Auth-Token': token(),
+        'X-Auth-Key': 'password',
+        'Accept': 'application/json',
+        'User-Agent': 'python-monascaclient',
+        'Content-Type': 'application/json'}
+
+    res = requests.post(api_url + endpoint,
+                        data=json.dumps(msg),
+                        headers=headers)
+    print res.status_code
+
+
+def api_delete(endpoint, msg):
+    print "delete to: {}".format(api_url + endpoint)
+
+    headers = {
+        'X-Auth-User': 'mini-mon',
+        'X-Auth-Token': token(),
+        'X-Auth-Key': 'password',
+        'Accept': 'application/json',
+        'User-Agent': 'python-monascaclient',
+        'Content-Type': 'application/json'}
+
+    res = requests.delete(api_url + endpoint,
+                          data=json.dumps(msg),
+                          headers=headers)
+    print res.status_code
 
 
 def add(_id):
@@ -124,7 +164,7 @@ def add(_id):
     msg = {}
     msg['transform_id'] = _id
     msg['transform_definition'] = conf
-    send("POST", "/v2.0/transforms", msg)
+    api_post("/v2.0/transforms", msg)
 
 
 def delete(_id):
@@ -132,7 +172,7 @@ def delete(_id):
     msg = {}
     msg['transform_id'] = _id
     msg['transform_definition'] = []
-    send("DELETE", "/v2.0/transforms", msg)
+    api_delete("/v2.0/transforms", msg)
 
 
 def wait_for_events(num):
@@ -161,14 +201,14 @@ def test_transform():
     add('B')
 
     time.sleep(2)
-    send("POST", "/v2.0/events/", event)
+    api_post("/v2.0/events/", event)
 
     rx_events = 0
     rx_events += wait_for_events(2)
 
     delete('A')
     time.sleep(2)
-    send("POST", "/v2.0/events/", event)
+    api_post("/v2.0/events/", event)
 
     rx_events += wait_for_events(1)
 
