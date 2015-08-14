@@ -13,7 +13,7 @@ from oslo_config import cfg
 from stackdistiller import condenser
 from stackdistiller import distiller
 
-from database import retrieve_transforms
+# from database import retrieve_transforms
 
 log = logging.getLogger(__name__)
 
@@ -50,11 +50,11 @@ class Transform(object):
 
         self._distiller_table = {}
 
-        for row in retrieve_transforms():
-            transform_id = row[0]
-            transform_def = row[1]
-            self._distiller_table[transform_id] = (
-                distiller.Distiller(transform_def))
+        # for row in retrieve_transforms():
+        #    transform_id = row[0]
+        #    transform_def = row[1]
+        #    self._distiller_table[transform_id] = (
+        #        distiller.Distiller(transform_def))
 
         self._condenser = condenser.DictionaryCondenser()
 
@@ -111,8 +111,10 @@ class Transform(object):
                     del self._distiller_table[transform_id]
             else:
                 log.info("Add definition {}".format(transform_id))
+                specification = yaml.load(transform_def['specification'])
+                specification[0]['traits']['_tenant_id'] = {'fields': '_tenant_id'}
                 self._distiller_table[transform_id] = (
-                    distiller.Distiller(yaml.load(transform_def['specification'])))
+                    distiller.Distiller(specification))
 
             self._lock.release()
 

@@ -178,14 +178,14 @@ def delete(name):
 
 def wait_for_events(num):
     rx_events = 0
-    expected_key_set = [u'event_type', u'service', u'tenant_id', u'when', u'request_id', u'message_id']
+    expected_key_set = [u'event_type', u'service', u'tenant_id', u'when', u'request_id', u'message_id', u'_tenant_id']
     data = consumer.get_messages(count=1000, timeout=5)
     for e in data:
         partition = e[0]
         consumer.commit([partition])
         event_payload = json.loads(e[1].message.value)
         if event_payload['tenant_id'] == "transform_func_test":
-            if len(event_payload.keys()) == 6:
+            if len(event_payload.keys()) == len(expected_key_set):
                 rx_events += 1
             else:
                 print("Event has invalid key set")
