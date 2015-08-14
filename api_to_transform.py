@@ -9,6 +9,8 @@ import logging
 
 from monascaclient import ksclient
 
+import yaml
+
 logging.basicConfig()
 
 kafka_url = "192.168.10.4:9092"
@@ -114,6 +116,9 @@ conf = [{'event_type': 'compute.instance.*',
                     'service': {'fields': 'publisher_id',
                                 'plugin': 'split'}}}]
 
+id_map = {}
+
+
 def token():
     keystone = {
         'username': 'mini-mon',
@@ -126,8 +131,6 @@ def token():
 
 
 def api_post(endpoint, msg):
-    print "post to: {}".format(api_url + endpoint)
-
     headers = {
         'X-Auth-User': 'mini-mon',
         'X-Auth-Token': token(),
@@ -136,15 +139,12 @@ def api_post(endpoint, msg):
         'User-Agent': 'python-monascaclient',
         'Content-Type': 'application/json'}
 
-    res = requests.post(api_url + endpoint,
-                        data=json.dumps(msg),
-                        headers=headers)
-    print res.status_code
+    return requests.post(api_url + endpoint,
+                         data=json.dumps(msg),
+                         headers=headers)
 
 
 def api_delete(endpoint, msg):
-    print "delete to: {}".format(api_url + endpoint)
-
     headers = {
         'X-Auth-User': 'mini-mon',
         'X-Auth-Token': token(),
@@ -153,26 +153,27 @@ def api_delete(endpoint, msg):
         'User-Agent': 'python-monascaclient',
         'Content-Type': 'application/json'}
 
-    res = requests.delete(api_url + endpoint,
-                          data=json.dumps(msg),
-                          headers=headers)
-    print res.status_code
+    return requests.delete(api_url + endpoint,
+                           data=json.dumps(msg),
+                           headers=headers)
 
 
-def add(_id):
-    print("Add transform definition {}".format(_id))
+def add(name):
     msg = {}
-    msg['transform_id'] = _id
-    msg['transform_definition'] = conf
-    api_post("/v2.0/transforms", msg)
+    msg['name'] = name
+    msg['description'] = "foo"
+    msg['specification'] = yaml.dump(conf)
+    print("Add transform definition: {}".format(name))
+    res = api_post("/v2.0/transforms", msg)
+    id_map[name] = res.json()['id']
+    assert res.status_code == 200
 
 
-def delete(_id):
-    print("Delete transform definition {}".format(_id))
-    msg = {}
-    msg['transform_id'] = _id
-    msg['transform_definition'] = []
-    api_delete("/v2.0/transforms", msg)
+def delete(name):
+    print("Delete transform definition: {}".format(name))
+    _id = id_map[name]
+    res = api_delete("/v2.0/transforms/{}".format(_id), {})
+    assert res.status_code == 204
 
 
 def wait_for_events(num):

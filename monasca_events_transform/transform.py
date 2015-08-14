@@ -4,6 +4,7 @@ import logging.config
 import os
 import threading
 import time
+import yaml
 
 import kafka
 
@@ -111,7 +112,7 @@ class Transform(object):
             else:
                 log.info("Add definition {}".format(transform_id))
                 self._distiller_table[transform_id] = (
-                    distiller.Distiller(transform_def))
+                    distiller.Distiller(yaml.load(transform_def['specification'])))
 
             self._lock.release()
 
