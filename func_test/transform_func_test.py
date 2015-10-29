@@ -14,7 +14,7 @@ import yaml
 logging.basicConfig()
 
 kafka_url = "192.168.10.4:9092"
-api_url = "http://192.168.10.4:8082"
+api_url = "http://192.168.10.4:8072"
 
 client = kafka.client.KafkaClient(kafka_url)
 producer = kafka.producer.KeyedProducer(
